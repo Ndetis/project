@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark theme (default) */
+:root {
+  --surface: 9 9 11;          /* neutral-950 */
+  --surface-2: 17 17 20;      /* neutral-900 */
+  --surface-3: 28 28 32;      /* neutral-800 */
+  --border: 38 38 42;         /* neutral-800 */
+  --border-2: 52 52 56;       /* neutral-700 */
+  --text-primary: 245 245 247; /* neutral-100 */
+  --text-secondary: 163 163 168; /* neutral-400 */
+  --text-tertiary: 115 115 120; /* neutral-500 */
+  --text-muted: 64 64 68;     /* neutral-700 */
+  --accent: 245 245 247;      /* neutral-100 */
+  --accent-text: 10 10 11;    /* neutral-950 */
+}
+
+/* Light theme */
+html.light {
+  --surface: 255 255 255;        /* white */
+  --surface-2: 249 249 250;      /* neutral-50 */
+  --surface-3: 244 244 245;      /* neutral-100 */
+  --border: 228 228 231;         /* neutral-200 */
+  --border-2: 212 212 216;       /* neutral-300 */
+  --text-primary: 24 24 27;      /* neutral-900 */
+  --text-secondary: 82 82 91;    /* neutral-600 */
+  --text-tertiary: 113 113 122;  /* neutral-500 */
+  --text-muted: 161 161 170;     /* neutral-400 */
+  --accent: 24 24 27;            /* neutral-900 */
+  --accent-text: 255 255 255;    /* white */
+}
+
+body {
+  background-color: rgb(var(--surface));
+  color: rgb(var(--text-primary));
+}
+
+/* Smooth theme transition */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border-2));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--text-muted));
+}
