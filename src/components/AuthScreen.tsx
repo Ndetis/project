@@ -191,20 +191,28 @@ export default function AuthScreen() {
             </form>
 
             {/* Demo accounts */}
-            <div className="mt-6 pt-6 border-t border-border space-y-2">
-              <p className="text-[10px] text-text-muted uppercase tracking-wider font-medium">Quick demo access</p>
-              <div className="flex gap-2">
+            <div className="mt-6 pt-6 border-t border-border space-y-3">
+              <p className="text-[10px] text-text-muted uppercase tracking-wider font-medium">Quick demo access — click to fill</p>
+              <div className="space-y-2">
                 <button
                   onClick={() => fillDemo('member')}
-                  className="flex-1 py-2.5 rounded-lg bg-surface-2 border border-border text-text-secondary text-xs font-medium hover:text-text-primary hover:border-border-2 transition-all"
+                  className="w-full flex items-center justify-between p-3 rounded-lg bg-surface-2 border border-border text-left hover:border-border-2 transition-all group"
                 >
-                  Member demo
+                  <div>
+                    <p className="text-xs font-medium text-text-secondary group-hover:text-text-primary">Member: Sarah Chen</p>
+                    <p className="text-[10px] text-text-muted">sarah@mpe.community · password123</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-text-muted group-hover:text-text-secondary" />
                 </button>
                 <button
                   onClick={() => fillDemo('admin')}
-                  className="flex-1 py-2.5 rounded-lg bg-surface-2 border border-border text-text-secondary text-xs font-medium hover:text-text-primary hover:border-border-2 transition-all"
+                  className="w-full flex items-center justify-between p-3 rounded-lg bg-surface-2 border border-border text-left hover:border-border-2 transition-all group"
                 >
-                  Admin demo
+                  <div>
+                    <p className="text-xs font-medium text-text-secondary group-hover:text-text-primary">Admin: Community Coordinator</p>
+                    <p className="text-[10px] text-text-muted">admin@mpe.community · password123</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-text-muted group-hover:text-text-secondary" />
                 </button>
               </div>
             </div>
