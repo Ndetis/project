@@ -56,11 +56,12 @@ const EXCHANGE_OPTIONS = [
 export default function Onboarding() {
   const { user, profile, refreshProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [step, setStep] = useState(0);
+  const joinedAlready = Boolean(profile?.community_id) && (profile?.membership_status ?? 'active') === 'active';
+  const [step, setStep] = useState(joinedAlready ? 2 : 0);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loadingCommunities, setLoadingCommunities] = useState(true);
   const [data, setData] = useState<OnboardingData>({
-    communityId: null,
+    communityId: profile?.community_id ?? null,
     skills: '',
     offerCategories: [],
     offerDetails: '',
@@ -93,6 +94,7 @@ export default function Onboarding() {
         .from('profiles')
         .update({
           community_id: data.communityId,
+          membership_status: 'active',
           max_travel_km: data.maxTravel,
           exchange_preferences: data.exchangePrefs,
           onboarding_complete: true,
@@ -143,6 +145,41 @@ export default function Onboarding() {
     }
   };
 
+  const requestJoin = async () => {
+    if (!user || !data.communityId) return;
+    setSaving(true);
+    setError(null);
+    const { error: profileErr } = await supabase
+      .from('profiles')
+      .update({ community_id: data.communityId, membership_status: 'pending' })
+      .eq('id', user.id);
+    if (profileErr) {
+      setError(profileErr.message);
+      setSaving(false);
+      return;
+    }
+
+    const { data: admins } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('community_id', data.communityId)
+      .eq('role', 'admin')
+      .eq('membership_status', 'active');
+    if (admins && admins.length > 0) {
+      await supabase.from('notifications').insert(
+        admins.map((admin) => ({
+          user_id: admin.id,
+          community_id: data.communityId,
+          type: 'join_request',
+          title: `${profile?.full_name || 'Someone'} wants to join`,
+          body: 'Open Community to approve or decline this request.',
+        })),
+      );
+    }
+    await refreshProfile();
+    setSaving(false);
+  };
+
   const canProceed = (): boolean => {
     switch (STEPS[step].key) {
       case 'community': return data.communityId !== null;
@@ -155,6 +192,8 @@ export default function Onboarding() {
   };
 
   const isLastStep = step === STEPS.length - 1;
+  const selectedCommunity = communities.find((community) => community.id === data.communityId);
+  const approvalRequired = STEPS[step].key === 'community' && (selectedCommunity?.join_policy ?? 'open') === 'approval';
   const structuredPreview = data.offerDetails.trim()
     ? structureOfferInput(data.offerDetails)
     : data.skills.trim()
@@ -230,6 +269,13 @@ export default function Onboarding() {
               <div className="space-y-3">
                 {loadingCommunities ? (
                   <p className="text-text-tertiary text-sm">Loading communities...</p>
+                ) : communities.length === 0 ? (
+                  <div className="bg-surface-3 rounded-xl p-4 border border-border">
+                    <p className="text-text-primary text-sm font-medium">No community is open yet.</p>
+                    <p className="text-text-secondary text-sm mt-1">
+                      A coordinator needs to create one before you can join. Ask them to register as a community coordinator.
+                    </p>
+                  </div>
                 ) : (
                   communities.map((comm) => {
                     const selected = data.communityId === comm.id;
@@ -251,6 +297,9 @@ export default function Onboarding() {
                         <div className="flex-1">
                           <p className={`font-medium ${selected ? 'text-text-primary' : 'text-text-secondary'}`}>{comm.name}</p>
                           <p className="text-text-muted text-xs mt-0.5">{comm.description}</p>
+                          <p className="text-text-tertiary text-[10px] uppercase tracking-wide mt-2">
+                            {(comm.join_policy ?? 'open') === 'approval' ? 'Approval required' : 'Join directly'}
+                          </p>
                         </div>
                         {selected && <Check className="w-5 h-5 text-text-primary flex-shrink-0" />}
                       </button>
@@ -432,7 +481,17 @@ export default function Onboarding() {
               <ArrowLeft className="w-4 h-4" />
               Back
             </button>
-            {isLastStep ? (
+            {approvalRequired ? (
+              <button
+                type="button"
+                onClick={requestJoin}
+                disabled={saving || !data.communityId}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-accent text-accent-text rounded-xl font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50"
+              >
+                {saving ? 'Sending request...' : 'Request to join'}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : isLastStep ? (
               <button
                 onClick={handleComplete}
                 disabled={saving || !canProceed()}

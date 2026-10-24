@@ -1,9 +1,9 @@
 import { type ReactNode, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useCommunityData } from '@/lib/useCommunityData';
-import { Home, Compass, Gift, HandHelping, Sparkles, LogOut, Bell, Activity } from 'lucide-react';
+import { Home, Compass, Gift, HandHelping, Sparkles, LogOut, Bell, Activity, Settings } from 'lucide-react';
 
-export type PageKey = 'home' | 'discover' | 'offers' | 'needs' | 'matches' | 'activity';
+export type PageKey = 'home' | 'discover' | 'offers' | 'needs' | 'matches' | 'activity' | 'community';
 
 interface NavItem {
   key: PageKey;
@@ -20,6 +20,11 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'activity', label: 'Agent Log', icon: Activity },
 ];
 
+function navItems(isAdmin: boolean): NavItem[] {
+  if (!isAdmin) return NAV_ITEMS;
+  return [...NAV_ITEMS, { key: 'community', label: 'Community', icon: Settings }];
+}
+
 interface LayoutProps {
   children: ReactNode;
   currentPage: PageKey;
@@ -31,6 +36,8 @@ export default function Layout({ children, currentPage, onNavigate, data }: Layo
   const { profile, signOut } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const unreadCount = data.notifications.filter((n) => !n.is_read).length;
+  const items = navItems(profile?.role === 'admin');
+  const pendingCount = data.pendingMembers.length;
 
   const handleNav = (page: PageKey) => {
     onNavigate(page);
@@ -54,7 +61,7 @@ export default function Layout({ children, currentPage, onNavigate, data }: Layo
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {NAV_ITEMS.map((item) => {
+          {items.map((item) => {
             const Icon = item.icon;
             const active = currentPage === item.key;
             return (
@@ -74,6 +81,13 @@ export default function Layout({ children, currentPage, onNavigate, data }: Layo
                     active ? 'bg-neutral-300 text-neutral-900' : 'bg-neutral-700 text-neutral-300'
                   }`}>
                     {data.matches.filter((m) => m.status === 'pending').length}
+                  </span>
+                )}
+                {item.key === 'community' && pendingCount > 0 && (
+                  <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                    active ? 'bg-neutral-300 text-neutral-900' : 'bg-neutral-700 text-neutral-300'
+                  }`}>
+                    {pendingCount}
                   </span>
                 )}
               </button>
@@ -122,7 +136,7 @@ export default function Layout({ children, currentPage, onNavigate, data }: Layo
       {mobileNavOpen && (
         <div className="lg:hidden fixed inset-0 z-30 bg-neutral-950/80 pt-16" onClick={() => setMobileNavOpen(false)}>
           <nav className="p-4 space-y-1" onClick={(e) => e.stopPropagation()}>
-            {NAV_ITEMS.map((item) => {
+            {items.map((item) => {
               const Icon = item.icon;
               const active = currentPage === item.key;
               return (
@@ -135,6 +149,13 @@ export default function Layout({ children, currentPage, onNavigate, data }: Layo
                 >
                   <Icon className="w-5 h-5" />
                   {item.label}
+                  {item.key === 'community' && pendingCount > 0 && (
+                    <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      active ? 'bg-neutral-300 text-neutral-900' : 'bg-neutral-700 text-neutral-300'
+                    }`}>
+                      {pendingCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -154,7 +175,7 @@ export default function Layout({ children, currentPage, onNavigate, data }: Layo
         {/* Desktop top bar */}
         <div className="hidden lg:flex items-center justify-between px-8 py-4 border-b border-neutral-800/50">
           <div>
-            <h1 className="text-lg font-semibold text-neutral-100">{NAV_ITEMS.find((n) => n.key === currentPage)?.label}</h1>
+            <h1 className="text-lg font-semibold text-neutral-100">{items.find((n) => n.key === currentPage)?.label}</h1>
             <p className="text-xs text-neutral-500">{data.community?.name} · {data.members.length} members</p>
           </div>
           <div className="relative">

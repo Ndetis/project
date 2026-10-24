@@ -13,16 +13,22 @@ export default function AuthScreen() {
   const [fullName, setFullName] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNotice(null);
     setLoading(true);
     if (mode === 'signup') {
       const role: UserRole = isAdmin ? 'admin' : 'member';
-      const { error: err } = await signUp(email, password, fullName, role);
+      const { error: err, needsEmailConfirmation } = await signUp(email, password, fullName, role);
       if (err) setError(err);
+      else if (needsEmailConfirmation) {
+        setNotice('Account created. Confirm the email we sent you, then sign in.');
+        setMode('signin');
+      }
     } else {
       const { error: err } = await signIn(email, password);
       if (err) setError(err);
@@ -30,13 +36,9 @@ export default function AuthScreen() {
     setLoading(false);
   };
 
-  const fillDemo = (account: 'member' | 'admin') => {
+  const fillDemo = (emailAddress: string) => {
     setMode('signin');
-    if (account === 'admin') {
-      setEmail('admin@mpe.community');
-    } else {
-      setEmail('sarah@mpe.community');
-    }
+    setEmail(emailAddress);
     setPassword('password123');
   };
 
@@ -168,8 +170,14 @@ export default function AuthScreen() {
                 </button>
               )}
 
+              {notice && (
+                <div role="status" className="text-sm text-text-secondary bg-surface-3 border border-border rounded-lg px-4 py-2.5">
+                  {notice}
+                </div>
+              )}
+
               {error && (
-                <div className="text-sm text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg px-4 py-2.5">
+                <div role="alert" className="text-sm text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg px-4 py-2.5">
                   {error}
                 </div>
               )}
@@ -195,22 +203,35 @@ export default function AuthScreen() {
               <p className="text-[10px] text-text-muted uppercase tracking-wider font-medium">Quick demo access — click to fill</p>
               <div className="space-y-2">
                 <button
-                  onClick={() => fillDemo('member')}
+                  type="button"
+                  onClick={() => fillDemo('coordinator@harbour.demo')}
                   className="w-full flex items-center justify-between p-3 rounded-lg bg-surface-2 border border-border text-left hover:border-border-2 transition-all group"
                 >
                   <div>
-                    <p className="text-xs font-medium text-text-secondary group-hover:text-text-primary">Member: Sarah Chen</p>
-                    <p className="text-[10px] text-text-muted">sarah@mpe.community · password123</p>
+                    <p className="text-xs font-medium text-text-secondary group-hover:text-text-primary">Coordinator: Nia Mensah</p>
+                    <p className="text-[10px] text-text-muted">coordinator@harbour.demo · password123</p>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-text-muted group-hover:text-text-secondary" />
                 </button>
                 <button
-                  onClick={() => fillDemo('admin')}
+                  type="button"
+                  onClick={() => fillDemo('amara@harbour.demo')}
                   className="w-full flex items-center justify-between p-3 rounded-lg bg-surface-2 border border-border text-left hover:border-border-2 transition-all group"
                 >
                   <div>
-                    <p className="text-xs font-medium text-text-secondary group-hover:text-text-primary">Admin: Community Coordinator</p>
-                    <p className="text-[10px] text-text-muted">admin@mpe.community · password123</p>
+                    <p className="text-xs font-medium text-text-secondary group-hover:text-text-primary">Member: Amara Diallo</p>
+                    <p className="text-[10px] text-text-muted">amara@harbour.demo · password123</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-text-muted group-hover:text-text-secondary" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fillDemo('samir@harbour.demo')}
+                  className="w-full flex items-center justify-between p-3 rounded-lg bg-surface-2 border border-border text-left hover:border-border-2 transition-all group"
+                >
+                  <div>
+                    <p className="text-xs font-medium text-text-secondary group-hover:text-text-primary">Waiting approval: Samir Adeyemi</p>
+                    <p className="text-[10px] text-text-muted">samir@harbour.demo · password123</p>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-text-muted group-hover:text-text-secondary" />
                 </button>

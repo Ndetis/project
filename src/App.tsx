@@ -3,7 +3,9 @@ import { AuthProvider, useAuth } from '@/lib/auth';
 import { ThemeProvider } from '@/lib/theme';
 import { useCommunityData } from '@/lib/useCommunityData';
 import AuthScreen from '@/components/AuthScreen';
+import AdminOnboarding from '@/components/AdminOnboarding';
 import Onboarding from '@/components/Onboarding';
+import PendingApproval from '@/components/PendingApproval';
 import Layout, { type PageKey } from '@/components/Layout';
 import HomePage from '@/components/HomePage';
 import DiscoverPage from '@/components/DiscoverPage';
@@ -11,6 +13,7 @@ import OffersPage from '@/components/OffersPage';
 import NeedsPage from '@/components/NeedsPage';
 import MatchesPage from '@/components/MatchesPage';
 import AgentLogPage from '@/components/AgentLogPage';
+import CommunitySettingsPage from '@/components/CommunitySettingsPage';
 
 function AppContent() {
   const { user, profile, loading } = useAuth();
@@ -35,6 +38,14 @@ function AppContent() {
     return <AuthScreen />;
   }
 
+  if (profile?.membership_status === 'pending') {
+    return <PendingApproval />;
+  }
+
+  if (profile?.role === 'admin' && !profile.community_id) {
+    return <AdminOnboarding />;
+  }
+
   if (profile && !profile.onboarding_complete) {
     return <Onboarding />;
   }
@@ -47,6 +58,7 @@ function AppContent() {
       {page === 'needs' && <NeedsPage data={data} />}
       {page === 'matches' && <MatchesPage data={data} />}
       {page === 'activity' && <AgentLogPage data={data} />}
+      {page === 'community' && profile?.role === 'admin' && <CommunitySettingsPage data={data} />}
     </Layout>
   );
 }

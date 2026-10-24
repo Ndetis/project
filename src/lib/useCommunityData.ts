@@ -13,6 +13,7 @@ export interface MemberData {
 export interface CommunityData {
   community: Community | null;
   members: MemberData[];
+  pendingMembers: Profile[];
   offers: Offer[];
   needs: Need[];
   matches: Match[];
@@ -38,6 +39,7 @@ export function useCommunityData(): CommunityData {
   const { user, profile } = useAuth();
   const [community, setCommunity] = useState<Community | null>(null);
   const [members, setMembers] = useState<MemberData[]>([]);
+  const [pendingMembers, setPendingMembers] = useState<Profile[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [needs, setNeeds] = useState<Need[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -65,20 +67,25 @@ export function useCommunityData(): CommunityData {
       supabase.from('profiles').select('*').eq('community_id', communityId),
     ]);
 
-    if (offersRes.data) setOffers(offersRes.data as Offer[]);
-    if (needsRes.data) setNeeds((needsRes.data as Need[]).filter((n) => n.status === 'active'));
     if (matchesRes.data) setMatches(matchesRes.data as Match[]);
     if (exchangesRes.data) setExchanges(exchangesRes.data as Exchange[]);
     if (logsRes.data) setAgentLogs(logsRes.data as AgentLog[]);
     if (notifRes.data) setNotifications(notifRes.data as Notification[]);
     if (profilesRes.data) {
       const profiles = profilesRes.data as Profile[];
+      const activeProfiles = profiles.filter((p) => (p.membership_status ?? 'active') === 'active');
+      const activeIds = new Set(activeProfiles.map((p) => p.id));
+      setPendingMembers(profiles.filter((p) => p.membership_status === 'pending'));
+      if (offersRes.data) setOffers((offersRes.data as Offer[]).filter((offer) => activeIds.has(offer.user_id)));
+      if (needsRes.data) {
+        setNeeds((needsRes.data as Need[]).filter((need) => need.status === 'active' && activeIds.has(need.user_id)));
+      }
       const commRes = await supabase.from('communities').select('*').eq('id', communityId).maybeSingle();
       if (commRes.data) setCommunity(commRes.data as Community);
 
       const memberData: MemberData[] = [];
-      for (const p of profiles) {
-        const memberOffers = offersRes.data?.filter((o) => o.user_id === p.id) ?? [];
+      for (const p of activeProfiles) {
+        const memberOffers = (offersRes.data as Offer[] | null)?.filter((o) => o.user_id === p.id) ?? [];
         const memberNeeds = (needsRes.data as Need[])?.filter((n) => n.user_id === p.id && n.status === 'active') ?? [];
         memberData.push({ profile: p, offers: memberOffers, needs: memberNeeds });
       }
@@ -318,6 +325,7 @@ export function useCommunityData(): CommunityData {
   return {
     community,
     members,
+    pendingMembers,
     offers,
     needs,
     matches,

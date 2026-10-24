@@ -8,11 +8,14 @@ export type MatchStatus = 'pending' | 'accepted' | 'rejected' | 'expired' | 'can
 export type ExchangeStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 export type SessionType = 'match' | 'search' | 'self_correct' | 'clarify';
 export type UserRole = 'member' | 'admin';
+export type JoinPolicy = 'open' | 'approval';
+export type MembershipStatus = 'pending' | 'active' | 'rejected';
 
 export interface Community {
   id: string;
   name: string;
   description: string;
+  join_policy?: JoinPolicy;
   created_at: string;
 }
 
@@ -30,6 +33,7 @@ export interface Profile {
   total_exchanges: number;
   onboarding_complete: boolean;
   role: UserRole;
+  membership_status?: MembershipStatus;
   created_at: string;
 }
 

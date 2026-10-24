@@ -3,15 +3,60 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { Profile, UserRole } from './types';
 
+interface SignUpResult {
+  error: string | null;
+  needsEmailConfirmation?: boolean;
+}
+
 interface AuthContextValue {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string, role?: UserRole) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName: string, role?: UserRole) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+}
+
+function roleFromMetadata(meta: Record<string, unknown> | undefined): UserRole {
+  return meta?.role === 'admin' ? 'admin' : 'member';
+}
+
+async function ensureProfile(
+  authUser: User,
+  fallback?: { fullName: string; role: UserRole },
+): Promise<{ profile: Profile | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
+    .maybeSingle();
+  if (error) return { profile: null, error: error.message };
+  if (data) return { profile: data as Profile, error: null };
+
+  const meta = (authUser.user_metadata ?? {}) as Record<string, unknown>;
+  const fullName = typeof meta.full_name === 'string' && meta.full_name
+    ? meta.full_name
+    : fallback?.fullName ?? '';
+  const role = meta.role === 'admin' || meta.role === 'member' ? meta.role : fallback?.role ?? roleFromMetadata(meta);
+  const { data: created, error: insertError } = await supabase
+    .from('profiles')
+    .insert({ id: authUser.id, full_name: fullName, role })
+    .select('*')
+    .single();
+
+  if (insertError?.code === '23505') {
+    const { data: existing, error: reloadError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    if (reloadError) return { profile: null, error: reloadError.message };
+    return { profile: (existing as Profile | null) ?? null, error: existing ? null : insertError.message };
+  }
+  if (insertError) return { profile: null, error: insertError.message };
+  return { profile: created as Profile, error: null };
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -22,17 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle();
-    if (error) {
-      console.error('Error loading profile:', error);
-      return;
-    }
-    setProfile(data as Profile | null);
+  const loadProfile = async (authUser: User) => {
+    const { profile: next, error } = await ensureProfile(authUser);
+    if (error) console.error('Error loading profile:', error);
+    setProfile(next);
   };
 
   useEffect(() => {
@@ -40,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        loadProfile(s.user.id).finally(() => setLoading(false));
+        loadProfile(s.user).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -51,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(s);
         setUser(s?.user ?? null);
         if (s?.user) {
-          await loadProfile(s.user.id);
+          await loadProfile(s.user);
         } else {
           setProfile(null);
         }
@@ -64,15 +102,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName, role } },
     });
     if (error) return { error: error.message };
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({ id: data.user.id, full_name: fullName, role });
-      if (profileError) return { error: profileError.message };
+    if (!data.session || !data.user) {
+      return { error: null, needsEmailConfirmation: true };
     }
+    const { error: profileError } = await ensureProfile(data.user, { fullName, role });
+    if (profileError) return { error: profileError };
     return { error: null };
   };
 
@@ -90,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshProfile = async () => {
-    if (user) await loadProfile(user.id);
+    if (user) await loadProfile(user);
   };
 
   return (

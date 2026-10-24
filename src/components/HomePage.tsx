@@ -30,6 +30,17 @@ export default function HomePage({ data, onNavigate }: HomeProps) {
         <p className="text-neutral-400 text-sm mt-2 max-w-lg">
           You have something. Someone needs something. Let's connect.
         </p>
+        {profile?.role === 'admin' && data.pendingMembers.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onNavigate('community')}
+            className="mt-4 text-sm text-neutral-200 bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-2.5 hover:border-neutral-500 transition-colors"
+          >
+            {data.pendingMembers.length === 1
+              ? '1 person is waiting for approval'
+              : `${data.pendingMembers.length} people are waiting for approval`}
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -230,7 +241,7 @@ export default function HomePage({ data, onNavigate }: HomeProps) {
   );
 }
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Home }) {
+function StatCard({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Users }) {
   return (
     <div className="bg-neutral-900 rounded-xl border border-neutral-800 p-4">
       <Icon className="w-4 h-4 text-neutral-500 mb-2" />
